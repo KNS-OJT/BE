@@ -11,6 +11,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.Getter;
+import org.hibernate.annotations.Generated;
 import lombok.Setter;
 
 import java.time.Instant;
@@ -47,5 +48,6 @@ public class Product {
     private boolean active = true;
 
     @Column(name = "created_at", nullable = false, insertable = false, updatable = false)
+    @Generated
     private Instant createdAt;
 }

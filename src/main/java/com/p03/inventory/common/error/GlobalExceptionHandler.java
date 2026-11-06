@@ -7,7 +7,9 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import jakarta.persistence.PersistenceException;
 import org.springframework.dao.DataAccessException;
+import org.springframework.transaction.TransactionSystemException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
@@ -108,8 +110,12 @@ public class GlobalExceptionHandler {
 
     // ---- Database (trigger, CHECK, UNIQUE) -----------------------------------------------
 
-    @ExceptionHandler(DataAccessException.class)
-    public ResponseEntity<ErrorResponse> handleDataAccess(DataAccessException ex, HttpServletRequest req) {
+    /**
+     * Lỗi do trigger / ràng buộc database. Có thể tới dưới dạng DataAccessException (Spring đã dịch),
+     * TransactionSystemException (lỗi lúc commit) hoặc PersistenceException (Hibernate, chưa dịch).
+     */
+    @ExceptionHandler({DataAccessException.class, TransactionSystemException.class, PersistenceException.class})
+    public ResponseEntity<ErrorResponse> handleDataAccess(RuntimeException ex, HttpServletRequest req) {
         DbErrorTranslator.Translated t = dbErrorTranslator.translate(ex);
         if (t.code() == ErrorCode.INTERNAL_ERROR) {
             log.error("Lỗi database không phân loại được tại {}", describe(req), ex);

@@ -1,7 +1,7 @@
 # Triển khai trên máy lab (SDD mục 8). Chỉ Nginx mở cổng ra ngoài.
 # nginx / frontend / detector / backup do các bạn phụ trách bổ sung vào file này.
 #   docker compose up -d --build
-# Postgres local khởi tạo bằng các file trong docker/postgres/init (00_roles.sh rồi tới schema SQL).
+# Postgres local khởi tạo bằng db/init: tạo role → 01_schema → 02_roles → 03_seed (dữ liệu demo).
 
 name: p03
 
@@ -12,16 +12,14 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
-      POSTGRES_DB: postgres
-      DB_NAME: ${DB_NAME:-p03}
-      DB_OWNER_PASSWORD: ${DB_OWNER_PASSWORD:?}
+      POSTGRES_DB: ${DB_NAME:-p03}
       DB_APP_PASSWORD: ${DB_APP_PASSWORD:?}
       DB_READONLY_PASSWORD: ${DB_READONLY_PASSWORD:?}
       DB_BACKUP_PASSWORD: ${DB_BACKUP_PASSWORD:?}
       TZ: UTC
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+      - ./db/init:/docker-entrypoint-initdb.d:ro
     networks: [db_net]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d ${DB_NAME:-p03}"]

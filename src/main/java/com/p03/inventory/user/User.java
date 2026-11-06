@@ -10,6 +10,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.Getter;
+import org.hibernate.annotations.Generated;
 import lombok.Setter;
 
 import java.time.Instant;
@@ -57,11 +58,13 @@ public class User {
     @Column(name = "last_login_at")
     private Instant lastLoginAt;
 
-    @Column(name = "password_changed_at", nullable = false, insertable = false)
+    @Column(name = "password_changed_at", nullable = false, insertable = false, updatable = false)
+    @Generated
     private Instant passwordChangedAt;
 
     /** Do database đặt (DEFAULT now()). */
     @Column(name = "created_at", nullable = false, insertable = false, updatable = false)
+    @Generated
     private Instant createdAt;
 
     public boolean isLockedAt(Instant now) {

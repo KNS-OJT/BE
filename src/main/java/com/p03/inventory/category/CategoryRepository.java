@@ -8,8 +8,13 @@ import java.util.List;
 
 public interface CategoryRepository extends JpaRepository<Category, Long> {
 
-    @Query("select count(c) > 0 from Category c where lower(c.name) = lower(:name) and (:excludeId is null or c.id <> :excludeId)")
-    boolean existsByNameIgnoreCase(@Param("name") String name, @Param("excludeId") Long excludeId);
+    @Query("select count(c) > 0 from Category c where lower(c.name) = lower(:name)")
+    boolean existsByNameIgnoreCase(@Param("name") String name);
+
+    @Query("select count(c) > 0 from Category c where lower(c.name) = lower(:name) and c.id <> :excludeId")
+    boolean existsByNameIgnoreCaseAndIdNot(@Param("name") String name, @Param("excludeId") Long excludeId);
 
     List<Category> findAllByOrderByNameAsc();
+
+    List<Category> findAllByActiveTrueOrderByNameAsc();
 }

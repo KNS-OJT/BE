@@ -186,7 +186,7 @@ Table goods_receipts {
   confirmed_by bigint [ref: > users.user_id, note: 'WAREHOUSE_STAFF']
   confirmed_at timestamptz
   status document_status [not null, default: 'DRAFT']
-  document_reference varchar(100)
+  document_reference varchar(100) [note: 'required before CONFIRMED (IN10)']
   note text
   cancel_reason text
   created_at timestamptz [not null, default: `now()`]

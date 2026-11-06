@@ -10,17 +10,17 @@ import java.util.Optional;
 
 public interface UserRepository extends JpaRepository<User, Long> {
 
-    /** username UNIQUE không phân biệt hoa thường (index lower(username)). */
+    /** username UNIQUE không phân biệt hoa thường (index ux_users_username_ci). */
     @Query("select u from User u where lower(u.username) = lower(:username)")
     Optional<User> findByUsernameIgnoreCase(@Param("username") String username);
 
     @Query("select count(u) > 0 from User u where lower(u.username) = lower(:username)")
     boolean existsByUsernameIgnoreCase(@Param("username") String username);
 
+    /** @param pattern chuỗi LIKE đã chuẩn hóa chữ thường, vd "%an%" ("%" = tất cả) */
     @Query("""
             select u from User u
-            where (:q is null or lower(u.username) like lower(concat('%', :q, '%'))
-                              or lower(u.fullName) like lower(concat('%', :q, '%')))
+            where lower(u.username) like :pattern escape '\\' or lower(u.fullName) like :pattern escape '\\'
             """)
-    Page<User> search(@Param("q") String q, Pageable pageable);
+    Page<User> search(@Param("pattern") String pattern, Pageable pageable);
 }
