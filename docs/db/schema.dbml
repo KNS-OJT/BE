@@ -1,0 +1,309 @@
+// =====================================================================
+// P03 - Inventory & Purchase Request Management System
+// Database design v2 (security-complete). Paste into dbdiagram.io.
+// Executable version with all triggers: 01_schema.sql
+// =====================================================================
+
+Project P03_Inventory {
+  database_type: 'PostgreSQL'
+  Note: 'SRS BR-01..BR-22 + SecRS IA-IN01..IA-IN08. Rules that a foreign key cannot express are enforced by triggers in 01_schema.sql (see table notes).'
+}
+
+Enum user_role {
+  REQUESTER
+  WAREHOUSE_STAFF
+  PURCHASING_STAFF
+  MANAGER
+}
+
+Enum purchase_request_status {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+  CANCELED
+}
+
+Enum purchase_order_status {
+  DRAFT
+  ORDERED
+  PARTIALLY_RECEIVED
+  RECEIVED
+  CANCELED
+}
+
+Enum document_status {
+  DRAFT
+  CONFIRMED
+  CANCELED
+}
+
+Enum stock_transaction_type {
+  IN
+  OUT
+  ADJUST_IN
+  ADJUST_OUT
+}
+
+Enum stock_adjustment_type {
+  OPENING
+  STOCKTAKE
+  CORRECTION
+}
+
+// 1. USERS & ROLES ---------------------------------------------------
+
+Table roles {
+  role_id smallint [pk, increment]
+  role_name user_role [not null, unique]
+}
+
+Table users {
+  user_id bigint [pk, increment]
+  username varchar(100) [not null, note: 'unique, case-insensitive']
+  password_hash varchar(255) [not null, note: 'bcrypt/argon2; CHECK length >= 50 refuses plain text']
+  full_name varchar(150) [not null]
+  email varchar(254)
+  role_id smallint [not null, ref: > roles.role_id]
+  is_active boolean [not null, default: true]
+  failed_login_count smallint [not null, default: 0]
+  locked_until timestamptz
+  last_login_at timestamptz
+  password_changed_at timestamptz [not null, default: `now()`]
+  created_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    `lower(username)` [unique]
+  }
+  Note: 'No physical delete: deactivate with is_active = false.'
+}
+
+// 2. PRODUCT CATALOG -------------------------------------------------
+
+Table categories {
+  category_id bigint [pk, increment]
+  category_name varchar(100) [not null, note: 'unique, case-insensitive']
+  description text
+  is_active boolean [not null, default: true]
+}
+
+Table products {
+  product_id bigint [pk, increment]
+  sku varchar(50) [not null, unique, note: 'BR-01: unique incl. inactive; locked once used']
+  product_name varchar(200) [not null]
+  category_id bigint [not null, ref: > categories.category_id]
+  unit varchar(30) [not null]
+  is_active boolean [not null, default: true]
+  created_at timestamptz [not null, default: `now()`]
+}
+
+Table suppliers {
+  supplier_id bigint [pk, increment]
+  supplier_name varchar(200) [not null]
+  contact_person varchar(150)
+  phone varchar(30)
+  email varchar(254)
+  address text
+  is_active boolean [not null, default: true]
+}
+
+// 3. STOCK BALANCE ---------------------------------------------------
+
+Table stock_balances {
+  stock_balance_id bigint [pk, increment]
+  product_id bigint [not null, unique, ref: - products.product_id]
+  quantity numeric(14,3) [not null, default: 0, note: 'CHECK >= 0; changed only by posting']
+  minimum_stock numeric(14,3) [not null, default: 0, note: 'CHECK >= 0']
+  updated_at timestamptz [not null, default: `now()`]
+  Note: 'Created automatically for each product. Must equal the sum of stock_transactions (v_stock_reconciliation).'
+}
+
+// 4. PURCHASE REQUEST ------------------------------------------------
+
+Table purchase_requests {
+  purchase_request_id bigint [pk, increment]
+  request_code varchar(30) [not null, unique, note: 'BR-15: PR-YYYY-NNNNN from sequence']
+  requester_id bigint [not null, ref: > users.user_id]
+  reason text [not null]
+  status purchase_request_status [not null, default: 'DRAFT']
+  submitted_at timestamptz
+  reviewed_by bigint [ref: > users.user_id, note: 'MANAGER only; CHECK <> requester_id (IA-IN01)']
+  reviewed_at timestamptz
+  review_reason text [note: 'required when REJECTED (BR-10)']
+  cancel_reason text
+  created_at timestamptz [not null, default: `now()`]
+  Note: 'DRAFT -> SUBMITTED -> APPROVED | REJECTED; DRAFT/SUBMITTED -> CANCELED. Editable only in DRAFT (BR-11).'
+}
+
+Table purchase_request_items {
+  purchase_request_item_id bigint [pk, increment]
+  purchase_request_id bigint [not null, ref: > purchase_requests.purchase_request_id]
+  product_id bigint [not null, ref: > products.product_id]
+  quantity numeric(14,3) [not null, note: 'CHECK > 0']
+  note text
+
+  indexes {
+    (purchase_request_id, product_id) [unique]
+  }
+}
+
+// 5. PURCHASE ORDER --------------------------------------------------
+
+Table purchase_orders {
+  purchase_order_id bigint [pk, increment]
+  order_code varchar(30) [not null, unique]
+  purchase_request_id bigint [not null, unique, ref: - purchase_requests.purchase_request_id, note: 'APPROVED PR only (IA-IN03); 1 PR -> max 1 PO (BR-19)']
+  supplier_id bigint [not null, ref: > suppliers.supplier_id]
+  created_by bigint [not null, ref: > users.user_id, note: 'PURCHASING_STAFF only (IA-IN02)']
+  order_date date [not null, default: `current_date`]
+  expected_delivery_date date
+  status purchase_order_status [not null, default: 'DRAFT']
+  note text
+  cancel_reason text
+  created_at timestamptz [not null, default: `now()`]
+  Note: 'PARTIALLY_RECEIVED / RECEIVED set automatically by receipt posting (BR-21). No cancel after a confirmed receipt (BR-18).'
+}
+
+Table purchase_order_items {
+  purchase_order_item_id bigint [pk, increment]
+  purchase_order_id bigint [not null, ref: > purchase_orders.purchase_order_id]
+  purchase_request_item_id bigint [not null, ref: > purchase_request_items.purchase_request_item_id]
+  quantity numeric(14,3) [not null, note: 'CHECK > 0 and <= approved quantity']
+
+  indexes {
+    (purchase_order_id, purchase_request_item_id) [unique]
+  }
+}
+
+// 6. GOODS RECEIPT ---------------------------------------------------
+
+Table goods_receipts {
+  goods_receipt_id bigint [pk, increment]
+  receipt_code varchar(30) [not null, unique]
+  purchase_order_id bigint [not null, ref: > purchase_orders.purchase_order_id]
+  received_by bigint [not null, ref: > users.user_id, note: 'WAREHOUSE_STAFF']
+  received_at timestamptz
+  confirmed_by bigint [ref: > users.user_id, note: 'WAREHOUSE_STAFF']
+  confirmed_at timestamptz
+  status document_status [not null, default: 'DRAFT']
+  document_reference varchar(100)
+  note text
+  cancel_reason text
+  created_at timestamptz [not null, default: `now()`]
+  Note: 'Confirm -> ledger IN + balance up, in one transaction. Cumulative receipts <= ordered (BR-06, BR-21).'
+}
+
+Table goods_receipt_items {
+  goods_receipt_item_id bigint [pk, increment]
+  goods_receipt_id bigint [not null, ref: > goods_receipts.goods_receipt_id]
+  purchase_order_item_id bigint [not null, ref: > purchase_order_items.purchase_order_item_id]
+  received_quantity numeric(14,3) [not null, note: 'CHECK > 0']
+
+  indexes {
+    (goods_receipt_id, purchase_order_item_id) [unique]
+  }
+}
+
+// 7. STOCK ISSUE -----------------------------------------------------
+
+Table stock_issues {
+  stock_issue_id bigint [pk, increment]
+  issue_code varchar(30) [not null, unique]
+  requested_by bigint [not null, ref: > users.user_id]
+  confirmed_by bigint [ref: > users.user_id, note: 'WAREHOUSE_STAFF; CHECK <> requested_by']
+  status document_status [not null, default: 'DRAFT']
+  requested_at timestamptz [not null, default: `now()`]
+  confirmed_at timestamptz
+  reason text [not null]
+  note text
+  cancel_reason text
+  Note: 'Confirm -> ledger OUT + balance down with row lock; blocked if stock is insufficient (BR-05, IA-IN04).'
+}
+
+Table stock_issue_items {
+  stock_issue_item_id bigint [pk, increment]
+  stock_issue_id bigint [not null, ref: > stock_issues.stock_issue_id]
+  product_id bigint [not null, ref: > products.product_id]
+  quantity numeric(14,3) [not null, note: 'CHECK > 0']
+
+  indexes {
+    (stock_issue_id, product_id) [unique]
+  }
+}
+
+// 8. STOCK ADJUSTMENT (opening stock, stocktake IN18, correction) ----
+
+Table stock_adjustments {
+  stock_adjustment_id bigint [pk, increment]
+  adjustment_code varchar(30) [not null, unique]
+  adjustment_type stock_adjustment_type [not null]
+  created_by bigint [not null, ref: > users.user_id, note: 'WAREHOUSE_STAFF']
+  confirmed_by bigint [ref: > users.user_id, note: 'MANAGER; CHECK <> created_by']
+  status document_status [not null, default: 'DRAFT']
+  reason text [not null]
+  cancel_reason text
+  created_at timestamptz [not null, default: `now()`]
+  confirmed_at timestamptz
+  Note: 'BR-22: stock is corrected only through an approved adjustment that is written to the ledger.'
+}
+
+Table stock_adjustment_items {
+  stock_adjustment_item_id bigint [pk, increment]
+  stock_adjustment_id bigint [not null, ref: > stock_adjustments.stock_adjustment_id]
+  product_id bigint [not null, ref: > products.product_id]
+  counted_quantity numeric(14,3) [not null, note: 'physical count; CHECK >= 0']
+  system_quantity numeric(14,3) [note: 'snapshot written at confirm']
+  note text
+
+  indexes {
+    (stock_adjustment_id, product_id) [unique]
+  }
+}
+
+// 9. STOCK LEDGER (append-only, hash chain) --------------------------
+
+Table stock_transactions {
+  stock_transaction_id bigint [pk, increment]
+  chain_seq bigint [not null, unique, note: 'gap-free order of the hash chain']
+  product_id bigint [not null, ref: > products.product_id]
+  transaction_type stock_transaction_type [not null]
+  quantity numeric(14,3) [not null, note: 'CHECK > 0']
+  balance_after numeric(14,3) [not null, note: 'CHECK >= 0']
+  goods_receipt_item_id bigint [unique, ref: - goods_receipt_items.goods_receipt_item_id]
+  stock_issue_item_id bigint [unique, ref: - stock_issue_items.stock_issue_item_id]
+  stock_adjustment_item_id bigint [unique, ref: - stock_adjustment_items.stock_adjustment_item_id]
+  created_by bigint [not null, ref: > users.user_id]
+  created_at timestamptz [not null, default: `now()`]
+  note text
+  prev_hash char(64) [not null]
+  row_hash char(64) [not null, unique, note: 'SHA-256(prev_hash | row data)']
+  Note: 'BR-07 / IA-IN06: no UPDATE/DELETE/TRUNCATE. Exactly one source item, matching the type (IN=receipt, OUT=issue, ADJUST_*=adjustment). Verify with fn_verify_stock_ledger().'
+}
+
+// 10. AUDIT LOG (append-only, hash chain) ----------------------------
+
+Table audit_logs {
+  audit_log_id bigint [pk, increment]
+  chain_seq bigint [not null, unique]
+  occurred_at timestamptz [not null, default: `now()`]
+  actor_id bigint [ref: > users.user_id]
+  action varchar(40) [not null, note: 'INSERT, UPDATE, DELETE, STATUS_CHANGE, LOGIN, LOGIN_FAILED, ACCESS_DENIED ...']
+  result varchar(10) [not null, default: 'SUCCESS', note: 'SUCCESS | DENIED | FAILED']
+  entity_type varchar(60) [not null]
+  entity_id bigint
+  entity_code varchar(30)
+  old_status varchar(30)
+  new_status varchar(30)
+  reason text
+  changed_data jsonb [note: '{column: {old, new}}; password_hash masked']
+  client_ip inet
+  prev_hash char(64) [not null]
+  row_hash char(64) [not null, unique]
+
+  indexes {
+    (entity_type, entity_id)
+    (actor_id, occurred_at)
+    (action, occurred_at)
+  }
+  Note: 'BR-17 / NFR05 / IA-IN05: written by triggers on every business table and by fn_log_security_event(). Verify with fn_verify_audit_log().'
+}
