@@ -1,4 +1,4 @@
-package com.p03.inventory.dashboard;
+package com.p03.inventory.dashboard.dto;
 
 public record DashboardResponse(
     Long activeProducts,

@@ -1,5 +1,6 @@
 package com.p03.inventory.dashboard;
 
+import com.p03.inventory.dashboard.dto.DashboardResponse;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 

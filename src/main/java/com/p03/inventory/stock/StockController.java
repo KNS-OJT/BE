@@ -13,9 +13,9 @@ import com.p03.inventory.stock.dto.StockTransactionResponse;
 import org.springframework.data.domain.Sort;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import com.p03.inventory.common.security.Authz;
 
 @RestController
-@PreAuthorize("isAuthenticated()")
 public class StockController {
 
     private final StockService stockService;
@@ -27,6 +27,7 @@ public class StockController {
     /**
      * Tìm kiếm danh sách tồn kho.
      */
+    @PreAuthorize(Authz.AUTHENTICATED)
     @GetMapping("/api/stock")
     public PageResponse<StockResponse> search(
         @RequestParam(required = false) String q,
@@ -48,6 +49,7 @@ public class StockController {
     /**
      * Lấy danh sách sản phẩm có tồn kho thấp.
      */
+    @PreAuthorize(Authz.AUTHENTICATED)
     @GetMapping("/api/stock/low")
     public PageResponse<StockResponse> getLowStock(
         @RequestParam(required = false) Integer page,
@@ -65,6 +67,7 @@ public class StockController {
     /**
      * Lấy lịch sử giao dịch kho.
      */
+    @PreAuthorize(Authz.AUTHENTICATED)
     @GetMapping("/api/stock-transactions")
     public PageResponse<StockTransactionResponse> getTransactions(
         @RequestParam(required = false) Long productId,
