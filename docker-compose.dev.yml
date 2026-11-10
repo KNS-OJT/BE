@@ -1,0 +1,12 @@
+# Overlay cho DEV: mở Postgres ở 127.0.0.1:5432 để backend chạy trong IntelliJ kết nối được.
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d postgres
+# KHÔNG dùng file này trên máy demo/lab.
+
+services:
+  postgres:
+    ports:
+      - "127.0.0.1:5432:5432"
+    networks: [db_net, dev_net]
+
+networks:
+  dev_net: {}

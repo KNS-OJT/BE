@@ -1,0 +1,53 @@
+# Triển khai trên máy lab (SDD mục 8). Chỉ Nginx mở cổng ra ngoài.
+# nginx / frontend / detector / backup do các bạn phụ trách bổ sung vào file này.
+#   docker compose up -d --build
+# Postgres local khởi tạo bằng db/init: tạo role → 01_schema → 02_roles → 03_seed (dữ liệu demo).
+
+name: p03
+
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
+      POSTGRES_DB: ${DB_NAME:-p03}
+      DB_APP_PASSWORD: ${DB_APP_PASSWORD:?}
+      DB_READONLY_PASSWORD: ${DB_READONLY_PASSWORD:?}
+      DB_BACKUP_PASSWORD: ${DB_BACKUP_PASSWORD:?}
+      TZ: UTC
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    networks: [db_net]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ${DB_NAME:-p03}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  backend:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_HOST: postgres:5432
+      DB_NAME: ${DB_NAME:-p03}
+      DB_USER: p03_app
+      DB_PASSWORD: ${DB_APP_PASSWORD:?}
+      DB_SSLMODE: disable
+      JWT_SECRET: ${JWT_SECRET:?}
+    networks: [app_net, db_net]
+    # Không publish cổng: Nginx (app_net) gọi backend:8080 nội bộ
+
+networks:
+  app_net: {}
+  db_net:
+    internal: true   # PostgreSQL không ra Internet, không publish cổng
+
+volumes:
+  pgdata: {}
