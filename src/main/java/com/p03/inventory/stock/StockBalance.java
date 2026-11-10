@@ -2,6 +2,10 @@ package com.p03.inventory.stock;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import com.p03.inventory.product.Product;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.Getter;
@@ -25,6 +29,10 @@ public class StockBalance {
 
     @Column(name = "product_id", nullable = false, insertable = false, updatable = false)
     private Long productId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "product_id", insertable = false, updatable = false)
+    private Product product;
 
     @Column(name = "quantity", nullable = false, precision = 14, scale = 3, insertable = false, updatable = false)
     private BigDecimal quantity;
