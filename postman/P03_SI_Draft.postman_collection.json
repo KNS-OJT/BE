@@ -1,0 +1,928 @@
+{
+  "info": {
+    "name": "P03 SI Draft - team sample v0.1",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Draft requests only. Run Auth then SI in order. Creates one new local Draft each run; no delete API. Workflow proposal is separate. Contract assertions are expectations, not proof of execution."
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "const base=pm.environment.get(\"baseUrl\");",
+          "if(!/^http:\\/\\/(localhost|127\\.0\\.0\\.1):\\d+$/.test(base||\"\")) throw new Error(\"This sample is restricted to a local backend\");",
+          "if(pm.request.url.toString().includes(\"/stock-issues\")) {",
+          " if(pm.request.url.toString().includes(\"{{issue_id}}\") && !pm.environment.get(\"issue_id\")) throw new Error(\"Run create first\");",
+          " const pid=Number(pm.environment.get(\"product_id\")); if(!Number.isInteger(pid)||pid<=0) throw new Error(\"Set an active product_id\");",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "00 Auth - fill passwords locally",
+      "item": [
+        {
+          "name": "Login owner",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/login",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{{login_body}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.environment.unset(\"token_owner\");",
+                  "const password=pm.environment.get(\"owner_password\");",
+                  "if(!password) throw new Error(\"Fill owner_password locally before running\");",
+                  "pm.variables.set(\"login_body\", JSON.stringify({username:pm.environment.get(\"owner_username\"),password}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const j=pm.response.json();",
+                  "pm.test(\"Role\", () => pm.expect(j.role).to.eql(\"REQUESTER\"));",
+                  "if(pm.response.code===200 && j.accessToken && j.role===\"REQUESTER\") { pm.environment.set(\"token_owner\",j.accessToken); pm.environment.set(\"user_owner\",j.userId); } else { pm.execution.setNextRequest(null); }"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Login other",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/login",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{{login_body}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.environment.unset(\"token_other\");",
+                  "const password=pm.environment.get(\"other_password\");",
+                  "if(!password) throw new Error(\"Fill other_password locally before running\");",
+                  "pm.variables.set(\"login_body\", JSON.stringify({username:pm.environment.get(\"other_username\"),password}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const j=pm.response.json();",
+                  "pm.test(\"Role\", () => pm.expect(j.role).to.eql(\"REQUESTER\"));",
+                  "if(pm.response.code===200 && j.accessToken && j.role===\"REQUESTER\") { pm.environment.set(\"token_other\",j.accessToken); pm.environment.set(\"user_other\",j.userId); } else { pm.execution.setNextRequest(null); }",
+                  "pm.test(\"Different requester accounts\",()=>pm.expect(Number(pm.environment.get(\"user_other\"))).not.to.eql(Number(pm.environment.get(\"user_owner\"))));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Login purchasing",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/login",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{{login_body}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.environment.unset(\"token_purchasing\");",
+                  "const password=pm.environment.get(\"purchasing_password\");",
+                  "if(!password) throw new Error(\"Fill purchasing_password locally before running\");",
+                  "pm.variables.set(\"login_body\", JSON.stringify({username:pm.environment.get(\"purchasing_username\"),password}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const j=pm.response.json();",
+                  "pm.test(\"Role\", () => pm.expect(j.role).to.eql(\"PURCHASING_STAFF\"));",
+                  "if(pm.response.code===200 && j.accessToken && j.role===\"PURCHASING_STAFF\") { pm.environment.set(\"token_purchasing\",j.accessToken); pm.environment.set(\"user_purchasing\",j.userId); } else { pm.execution.setNextRequest(null); }"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "01 SI Draft - run in order",
+      "item": [
+        {
+          "name": "01 Create own Draft",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/stock-issues",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_owner}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"reason\":\"SI Postman local test\",\"items\":[{\"productId\":{{product_id}},\"quantity\":2}]}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.environment.unset(\"issue_id\");"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", () => pm.response.to.have.status(201));",
+                  "const j=pm.response.json();",
+                  "pm.test(\"Own DRAFT\",()=>{pm.expect(j.status).to.eql(\"DRAFT\");pm.expect(j.requestedBy).to.eql(Number(pm.environment.get(\"user_owner\")));});",
+                  "if(pm.response.code===201 && j.id && j.status===\"DRAFT\") pm.environment.set(\"issue_id\",j.id); else pm.execution.setNextRequest(null);"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "02 Read own Draft",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/stock-issues/{{issue_id}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_owner}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Correct issue\",()=>pm.expect(pm.response.json().id).to.eql(Number(pm.environment.get(\"issue_id\"))));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "03 Update own Draft",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/stock-issues/{{issue_id}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_owner}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"reason\":\"SI Postman updated\",\"items\":[{\"productId\":{{product_id}},\"quantity\":3}]}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Updated\",()=>{const j=pm.response.json();pm.expect(j.status).to.eql(\"DRAFT\");pm.expect(j.items[0].quantity).to.eql(3);pm.expect(j.reason).to.eql(\"SI Postman updated\");});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "04 List own issues",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/stock-issues?page=0&size=20",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_owner}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Pagination and ownership\",()=>{const j=pm.response.json();pm.expect(j.page).to.eql(0);pm.expect(j.items).to.be.an(\"array\"); j.items.forEach(x=>pm.expect(x.requestedBy).to.eql(Number(pm.environment.get(\"user_owner\"))));});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "05 Other requester cannot read",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/stock-issues/{{issue_id}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_other}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 404\", () => pm.response.to.have.status(404));",
+                  "pm.test(\"Error contract\", () => { const e=pm.response.json(); pm.expect(e.status).to.eql(404); pm.expect(e.code).to.eql(\"NOT_FOUND\"); pm.expect(e.requestId).to.be.a(\"string\").and.not.empty; });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "06 Other requester cannot update",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/stock-issues/{{issue_id}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_other}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"reason\":\"Forbidden edit\",\"items\":[{\"productId\":{{product_id}},\"quantity\":9}]}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 404\", () => pm.response.to.have.status(404));",
+                  "pm.test(\"Error contract\", () => { const e=pm.response.json(); pm.expect(e.status).to.eql(404); pm.expect(e.code).to.eql(\"NOT_FOUND\"); pm.expect(e.requestId).to.be.a(\"string\").and.not.empty; });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "07 Other list excludes our issue",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/stock-issues?page=0&size=20",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_other}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"No owner leakage in returned page\",()=>{const j=pm.response.json();j.items.forEach(x=>{pm.expect(x.id).not.to.eql(Number(pm.environment.get(\"issue_id\")));pm.expect(x.requestedBy).to.eql(Number(pm.environment.get(\"user_other\")));});});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "08 No token",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/stock-issues/{{issue_id}}",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 401\", () => pm.response.to.have.status(401));",
+                  "pm.test(\"Error contract\", () => { const e=pm.response.json(); pm.expect(e.status).to.eql(401); pm.expect(e.code).to.eql(\"UNAUTHENTICATED\"); pm.expect(e.requestId).to.be.a(\"string\").and.not.empty; });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "09 Purchasing cannot list",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/stock-issues?page=0&size=20",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_purchasing}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 403\", () => pm.response.to.have.status(403));",
+                  "pm.test(\"Error contract\", () => { const e=pm.response.json(); pm.expect(e.status).to.eql(403); pm.expect(e.code).to.eql(\"FORBIDDEN_ROLE\"); pm.expect(e.requestId).to.be.a(\"string\").and.not.empty; });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "10 Unknown status",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/stock-issues/{{issue_id}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_owner}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"reason\":\"Bad\",\"status\":\"CONFIRMED\",\"items\":[{\"productId\":{{product_id}},\"quantity\":3}]}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Error contract\", () => { const e=pm.response.json(); pm.expect(e.status).to.eql(400); pm.expect(e.code).to.eql(\"UNKNOWN_FIELD\"); pm.expect(e.requestId).to.be.a(\"string\").and.not.empty; });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "10 Unknown status verify unchanged",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/stock-issues/{{issue_id}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_owner}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Rejected update did not mutate\",()=>{const j=pm.response.json();pm.expect(j.status).to.eql(\"DRAFT\");pm.expect(j.reason).to.eql(\"SI Postman updated\");pm.expect(j.items.length).to.eql(1);pm.expect(j.items[0].productId).to.eql(Number(pm.environment.get(\"product_id\")));pm.expect(j.items[0].quantity).to.eql(3);});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "11 Zero quantity",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/stock-issues/{{issue_id}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_owner}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"reason\":\"Bad\",\"items\":[{\"productId\":{{product_id}},\"quantity\":0}]}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Error contract\", () => { const e=pm.response.json(); pm.expect(e.status).to.eql(400); pm.expect(e.code).to.eql(\"VALIDATION_ERROR\"); pm.expect(e.requestId).to.be.a(\"string\").and.not.empty; });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "11 Zero quantity verify unchanged",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/stock-issues/{{issue_id}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_owner}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Rejected update did not mutate\",()=>{const j=pm.response.json();pm.expect(j.status).to.eql(\"DRAFT\");pm.expect(j.reason).to.eql(\"SI Postman updated\");pm.expect(j.items.length).to.eql(1);pm.expect(j.items[0].productId).to.eql(Number(pm.environment.get(\"product_id\")));pm.expect(j.items[0].quantity).to.eql(3);});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "12 Negative quantity",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/stock-issues/{{issue_id}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_owner}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"reason\":\"Bad\",\"items\":[{\"productId\":{{product_id}},\"quantity\":-1}]}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Error contract\", () => { const e=pm.response.json(); pm.expect(e.status).to.eql(400); pm.expect(e.code).to.eql(\"VALIDATION_ERROR\"); pm.expect(e.requestId).to.be.a(\"string\").and.not.empty; });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "12 Negative quantity verify unchanged",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/stock-issues/{{issue_id}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_owner}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Rejected update did not mutate\",()=>{const j=pm.response.json();pm.expect(j.status).to.eql(\"DRAFT\");pm.expect(j.reason).to.eql(\"SI Postman updated\");pm.expect(j.items.length).to.eql(1);pm.expect(j.items[0].productId).to.eql(Number(pm.environment.get(\"product_id\")));pm.expect(j.items[0].quantity).to.eql(3);});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "13 Duplicate product",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/stock-issues/{{issue_id}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_owner}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"reason\":\"Bad\",\"items\":[{\"productId\":{{product_id}},\"quantity\":1},{\"productId\":{{product_id}},\"quantity\":2}]}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Error contract\", () => { const e=pm.response.json(); pm.expect(e.status).to.eql(400); pm.expect(e.code).to.eql(\"VALIDATION_ERROR\"); pm.expect(e.requestId).to.be.a(\"string\").and.not.empty; });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "13 Duplicate product verify unchanged",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/stock-issues/{{issue_id}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_owner}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Rejected update did not mutate\",()=>{const j=pm.response.json();pm.expect(j.status).to.eql(\"DRAFT\");pm.expect(j.reason).to.eql(\"SI Postman updated\");pm.expect(j.items.length).to.eql(1);pm.expect(j.items[0].productId).to.eql(Number(pm.environment.get(\"product_id\")));pm.expect(j.items[0].quantity).to.eql(3);});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "14 Empty items",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/stock-issues/{{issue_id}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_owner}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"reason\":\"Bad\",\"items\":[]}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Error contract\", () => { const e=pm.response.json(); pm.expect(e.status).to.eql(400); pm.expect(e.code).to.eql(\"VALIDATION_ERROR\"); pm.expect(e.requestId).to.be.a(\"string\").and.not.empty; });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "14 Empty items verify unchanged",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/stock-issues/{{issue_id}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_owner}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Rejected update did not mutate\",()=>{const j=pm.response.json();pm.expect(j.status).to.eql(\"DRAFT\");pm.expect(j.reason).to.eql(\"SI Postman updated\");pm.expect(j.items.length).to.eql(1);pm.expect(j.items[0].productId).to.eql(Number(pm.environment.get(\"product_id\")));pm.expect(j.items[0].quantity).to.eql(3);});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "15 Invalid pagination",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/stock-issues?page=-1&size=20",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_owner}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Error contract\", () => { const e=pm.response.json(); pm.expect(e.status).to.eql(400); pm.expect(e.code).to.eql(\"VALIDATION_ERROR\"); pm.expect(e.requestId).to.be.a(\"string\").and.not.empty; });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    }
+  ]
+}
