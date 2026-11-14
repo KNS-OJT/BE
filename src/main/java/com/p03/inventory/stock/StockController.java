@@ -1,7 +1,6 @@
 package com.p03.inventory.stock;
 
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.p03.inventory.common.paging.Paging;
@@ -27,7 +26,7 @@ public class StockController {
     /**
      * Tìm kiếm danh sách tồn kho.
      */
-    @PreAuthorize(Authz.AUTHENTICATED)
+    @PreAuthorize(Authz.WAREHOUSE_OR_MANAGER)
     @GetMapping("/api/stock")
     public PageResponse<StockResponse> search(
         @RequestParam(required = false) String q,
@@ -49,7 +48,7 @@ public class StockController {
     /**
      * Lấy danh sách sản phẩm có tồn kho thấp.
      */
-    @PreAuthorize(Authz.AUTHENTICATED)
+    @PreAuthorize(Authz.WAREHOUSE_PURCHASING_MANAGER)
     @GetMapping("/api/stock/low")
     public PageResponse<StockResponse> getLowStock(
         @RequestParam(required = false) Integer page,
@@ -57,8 +56,7 @@ public class StockController {
     ) {
         var pageable = Paging.of(
             page,
-            size,
-            Sort.by("productId").ascending()
+            size
         );
 
         return stockService.getLowStock(pageable);
@@ -67,7 +65,7 @@ public class StockController {
     /**
      * Lấy lịch sử giao dịch kho.
      */
-    @PreAuthorize(Authz.AUTHENTICATED)
+    @PreAuthorize(Authz.STOCK_READER)
     @GetMapping("/api/stock-transactions")
     public PageResponse<StockTransactionResponse> getTransactions(
         @RequestParam(required = false) Long productId,

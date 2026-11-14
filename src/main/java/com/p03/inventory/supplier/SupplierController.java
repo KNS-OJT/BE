@@ -59,4 +59,10 @@ public class SupplierController {
     public SupplierResponse update(@PathVariable Long id, @Valid @RequestBody SupplierUpdateRequest request) {
         return supplierService.update(id, request);
     }
+
+    @PreAuthorize(Authz.MANAGER)
+    @PostMapping("/{id}/activate")
+    public SupplierResponse activate(@PathVariable Long id) {
+        return supplierService.activate(id);
+    }
 }

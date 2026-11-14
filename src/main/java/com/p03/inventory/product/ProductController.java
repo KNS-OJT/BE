@@ -63,7 +63,7 @@ public class ProductController {
         return productService.update(id, request);
     }
 
-    @PreAuthorize(Authz.WAREHOUSE_OR_MANAGER)
+    @PreAuthorize(Authz.MANAGER)
     @PutMapping("/{id}/min-stock")
     public MinStockResponse updateMinimumStock(@PathVariable Long id, @Valid @RequestBody MinStockRequest request) {
         return productService.updateMinimumStock(id, request);

@@ -21,7 +21,7 @@ public interface PurchaseRequestRepository extends JpaRepository<PurchaseRequest
     @Query("""
             select pr from PurchaseRequest pr
             where (:requesterId is null or pr.requester.id = :requesterId)
-              and (:status is null or pr.status = :status)
+              and pr.status = coalesce(:status, pr.status)
               and (:pattern is null or lower(pr.requestCode) like :pattern escape '\\' or lower(pr.reason) like :pattern escape '\\')
             """)
     Page<PurchaseRequest> search(@Param("requesterId") Long requesterId,
@@ -39,4 +39,3 @@ public interface PurchaseRequestRepository extends JpaRepository<PurchaseRequest
     @Query("select pr from PurchaseRequest pr where pr.id = :id")
     Optional<PurchaseRequest> findByIdForUpdate(@Param("id") Long id);
 }
-

@@ -17,7 +17,7 @@ public class StockIssue {
     @Column(name="status", nullable=false, columnDefinition="document_status")
     private StockIssueStatus status = StockIssueStatus.DRAFT;
     @Generated @Column(name="requested_at", insertable=false, updatable=false) private Instant requestedAt;
-    @Column(name="confirmed_at") private Instant confirmedAt;
+    @Generated @Column(name="confirmed_at", insertable=false, updatable=false) private Instant confirmedAt;
     @Column(name="reason", nullable=false, columnDefinition="text") private String reason;
     @Column(name="note", columnDefinition="text") private String note;
     @Column(name="cancel_reason", columnDefinition="text") private String cancelReason;

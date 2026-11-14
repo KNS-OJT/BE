@@ -48,18 +48,32 @@ class StockIssueServiceTest {
                 ()->service.update(10L,new StockIssueUpdateRequest("test",List.of()))).code());
         verifyNoInteractions(lines,products);
     }
-    @Test void purchasingCannotCreateIssue() {
+    @Test void purchasingCanCreateIssue() {
         login(3L,Role.PURCHASING_STAFF);
-        assertEquals(ErrorCode.FORBIDDEN_ROLE,assertThrows(ApiException.class,
-                ()->service.create(new StockIssueCreateRequest("test",List.of()))).code());
-        verifyNoInteractions(issues,lines,products);
+        Product product=new Product(); product.setActive(true);
+        when(products.findById(5L)).thenReturn(Optional.of(product));
+        when(issues.saveAndFlush(any())).thenAnswer(inv -> {
+            StockIssue issue=inv.getArgument(0);
+            issue.setId(10L);
+            return issue;
+        });
+        service.create(new StockIssueCreateRequest("test",
+                List.of(new StockIssueLineRequest(5L,BigDecimal.ONE))));
+        verify(issues).saveAndFlush(any());
     }
-    @Test void listAlwaysUsesAuthenticatedOwner() {
+    @Test void requesterListUsesAuthenticatedOwner() {
         var pageable=PageRequest.of(0,20);
         when(issues.findByRequestedBy(1L,pageable)).thenReturn(Page.empty(pageable));
-        assertTrue(service.list(pageable).items().isEmpty());
+        assertTrue(service.list(null,pageable).items().isEmpty());
         verify(issues).findByRequestedBy(1L,pageable);
         verify(issues,never()).findAll(any(Pageable.class));
+    }
+    @Test void warehouseListCanSeeReviewQueue() {
+        login(4L,Role.WAREHOUSE_STAFF);
+        var pageable=PageRequest.of(0,20);
+        when(issues.findAll(pageable)).thenReturn(Page.empty(pageable));
+        assertTrue(service.list(null,pageable).items().isEmpty());
+        verify(issues).findAll(pageable);
     }
     @Test void duplicateProductRejectedBeforeWriting() {
         var p=new Product(); p.setActive(true);
@@ -68,6 +82,37 @@ class StockIssueServiceTest {
         assertEquals(ErrorCode.VALIDATION_ERROR,assertThrows(ApiException.class,
                 ()->service.create(new StockIssueCreateRequest("test",List.of(line,line)))).code());
         verifyNoInteractions(issues,lines);
+    }
+    @Test void requesterCannotConfirmOwnIssue() {
+        login(1L,Role.WAREHOUSE_STAFF);
+        when(issues.lockById(10L)).thenReturn(Optional.of(issue(1L,StockIssueStatus.DRAFT)));
+        var e=assertThrows(ApiException.class,()->service.confirm(10L));
+        assertEquals(ErrorCode.SOD_VIOLATION,e.code());
+        assertEquals(ApiException.AuditReason.SOD_VIOLATION,e.auditReason());
+        verify(issues,never()).saveAndFlush(any());
+    }
+    @Test void warehouseConfirmsIssueAndUsesAuthenticatedActor() {
+        login(9L,Role.WAREHOUSE_STAFF);
+        StockIssue issue=issue(1L,StockIssueStatus.DRAFT);
+        when(issues.lockById(10L)).thenReturn(Optional.of(issue));
+        when(issues.saveAndFlush(issue)).thenReturn(issue);
+
+        service.confirm(10L);
+
+        assertEquals(StockIssueStatus.CONFIRMED,issue.getStatus());
+        assertEquals(9L,issue.getConfirmedBy());
+        verify(issues).saveAndFlush(issue);
+    }
+    @Test void warehouseRejectsIssueWithRequiredReason() {
+        login(9L,Role.WAREHOUSE_STAFF);
+        StockIssue issue=issue(1L,StockIssueStatus.DRAFT);
+        when(issues.lockById(10L)).thenReturn(Optional.of(issue));
+        when(issues.saveAndFlush(issue)).thenReturn(issue);
+
+        service.reject(10L,new StockIssueDecisionRequest("  Not available  "));
+
+        assertEquals(StockIssueStatus.CANCELED,issue.getStatus());
+        assertEquals("Not available",issue.getCancelReason());
     }
     @Test void inactiveProductRejectedBeforeWriting() {
         var p=new Product(); p.setActive(false);

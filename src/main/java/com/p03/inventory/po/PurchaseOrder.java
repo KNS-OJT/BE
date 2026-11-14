@@ -33,7 +33,7 @@ import java.util.List;
  * <ul>
  *   <li>order_code, order_date, created_at do DB sinh; purchase_request_id, created_by bất biến (trigger kiểm tra).</li>
  *   <li>PR chỉ giữ id (module PR thuộc nhánh khác); đọc PR qua {@link PurchaseRequestReader}.</li>
- *   <li>note / cancel_reason chỉ đọc: chưa có endpoint ghi trong phạm vi module này.</li>
+ *   <li>note chỉ đọc; cancel_reason được ghi bởi thao tác hủy PO.</li>
  * </ul>
  */
 @Entity
@@ -76,7 +76,7 @@ public class PurchaseOrder {
     @Column(name = "note", columnDefinition = "text", insertable = false, updatable = false)
     private String note;
 
-    @Column(name = "cancel_reason", columnDefinition = "text", insertable = false, updatable = false)
+    @Column(name = "cancel_reason", columnDefinition = "text")
     private String cancelReason;
 
     @Column(name = "created_at", nullable = false, insertable = false, updatable = false)

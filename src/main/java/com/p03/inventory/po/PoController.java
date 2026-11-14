@@ -4,6 +4,7 @@ import com.p03.inventory.common.paging.PageResponse;
 import com.p03.inventory.common.paging.Paging;
 import com.p03.inventory.common.security.Authz;
 import com.p03.inventory.po.dto.PoCreateRequest;
+import com.p03.inventory.po.dto.PoCancelRequest;
 import com.p03.inventory.po.dto.PoResponse;
 import com.p03.inventory.po.dto.PoUpdateRequest;
 import jakarta.validation.Valid;
@@ -67,5 +68,11 @@ public class PoController {
     @PostMapping("/{id}/order")
     public PoResponse order(@PathVariable Long id) {
         return poService.order(id);
+    }
+
+    @PreAuthorize(Authz.PURCHASING)
+    @PostMapping("/{id}/cancel")
+    public PoResponse cancel(@PathVariable Long id, @Valid @RequestBody PoCancelRequest request) {
+        return poService.cancel(id, request);
     }
 }

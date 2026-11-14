@@ -1,6 +1,7 @@
 package com.p03.inventory.dashboard;
 
 import com.p03.inventory.dashboard.dto.DashboardResponse;
+import com.p03.inventory.common.security.CurrentUser;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,6 +16,6 @@ public class DashboardService {
 
     @Transactional(readOnly = true)
     public DashboardResponse getSummary() {
-        return dashboardRepository.getSummary();
+        return dashboardRepository.getSummary(CurrentUser.role(), CurrentUser.id());
     }
 }

@@ -6,6 +6,7 @@ import com.p03.inventory.auth.dto.MeResponse;
 import com.p03.inventory.common.security.Authz;
 import jakarta.annotation.security.PermitAll;
 import jakarta.validation.Valid;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -25,6 +26,7 @@ public class AuthController {
 
     /** POST /api/auth/login – public. Nginx giới hạn 5 request/phút/IP (IA-NF05). */
     @PermitAll
+    @SecurityRequirements
     @PostMapping("/login")
     public LoginResponse login(@Valid @RequestBody LoginRequest request) {
         return authService.login(request);
