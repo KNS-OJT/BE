@@ -2,6 +2,8 @@ package com.p03.inventory.supplier;
 
 import com.p03.inventory.common.error.ApiException;
 import com.p03.inventory.common.paging.PageResponse;
+import com.p03.inventory.common.security.CurrentUser;
+import com.p03.inventory.common.security.Role;
 import com.p03.inventory.common.util.Text;
 import com.p03.inventory.supplier.dto.SupplierCreateRequest;
 import com.p03.inventory.supplier.dto.SupplierResponse;
@@ -52,6 +54,9 @@ public class SupplierService {
     @Transactional
     public SupplierResponse update(Long id, SupplierUpdateRequest req) {
         Supplier s = load(id);
+        if (req.active() && !s.isActive()) {
+            throw ApiException.forbiddenRole("SUPPLIER", id);
+        }
         s.setName(req.supplierName().trim());
         s.setContactPerson(Text.trimToNull(req.contactPerson()));
         s.setPhone(Text.trimToNull(req.phone()));
@@ -59,6 +64,15 @@ public class SupplierService {
         s.setAddress(Text.trimToNull(req.address()));
         s.setActive(req.active());
         return SupplierResponse.from(suppliers.saveAndFlush(s));
+    }
+
+    /** Purchasing may deactivate; reactivation requires Manager approval (IA-IN02). */
+    @Transactional
+    public SupplierResponse activate(Long id) {
+        if (!CurrentUser.is(Role.MANAGER)) throw ApiException.forbiddenRole("SUPPLIER", id);
+        Supplier supplier = load(id);
+        supplier.setActive(true);
+        return SupplierResponse.from(suppliers.saveAndFlush(supplier));
     }
 
     private Supplier load(Long id) {

@@ -5,6 +5,7 @@ import com.p03.inventory.common.paging.PageResponse;
 import com.p03.inventory.common.security.CurrentUser;
 import com.p03.inventory.common.security.Role;
 import com.p03.inventory.po.dto.PoCreateRequest;
+import com.p03.inventory.po.dto.PoCancelRequest;
 import com.p03.inventory.po.dto.PoResponse;
 import com.p03.inventory.po.dto.PoUpdateRequest;
 import com.p03.inventory.supplier.Supplier;
@@ -137,6 +138,18 @@ public class PoService {
             throw ApiException.validation("PO phải có ít nhất một dòng hàng");
         }
         po.setStatus(PoStatus.ORDERED);
+        return toResponse(orders.saveAndFlush(po));
+    }
+
+    /** Hủy PO chưa nhận hàng; database trigger kiểm tra lại BR-18 và quyền tác nhân. */
+    @Transactional
+    public PoResponse cancel(Long id, PoCancelRequest request) {
+        PurchaseOrder po = orders.findByIdForUpdate(id).orElseThrow(ApiException::notFound);
+        if (po.getStatus() != PoStatus.DRAFT && po.getStatus() != PoStatus.ORDERED) {
+            throw ApiException.invalidStateAudited("Chỉ PO DRAFT hoặc ORDERED mới được hủy", "PO", id);
+        }
+        po.setCancelReason(request.reason().trim());
+        po.setStatus(PoStatus.CANCELED);
         return toResponse(orders.saveAndFlush(po));
     }
 

@@ -23,6 +23,7 @@ SELECT v.username, crypt('Demo@12345', gen_salt('bf', 10)), v.full_name, v.email
 INSERT INTO categories (category_name, description) VALUES
   ('Văn phòng phẩm', 'Giấy, bút, kẹp, sổ'),
   ('Thiết bị IT',    'Chuột, bàn phím, cáp, ổ cứng'),
+  ('Linh kiện máy tính', 'Các linh kiện PC: CPU, bo mạch chủ, RAM, lưu trữ, GPU, nguồn và tản nhiệt'),
   ('Vệ sinh',        'Dung dịch, khăn giấy');
 
 INSERT INTO products (sku, product_name, category_id, unit)
@@ -34,6 +35,14 @@ SELECT v.sku, v.name, c.category_id, v.unit
     ('IT-MOU-001', 'Chuột không dây',          'Thiết bị IT',   'cái'),
     ('IT-KEY-002', 'Bàn phím USB',             'Thiết bị IT',   'cái'),
     ('IT-HDMI-003','Cáp HDMI 2m',              'Thiết bị IT',   'sợi'),
+    ('PC-CPU-AM5-R5', 'CPU AMD Ryzen 5 AM5', 'Linh kiện máy tính', 'cái'),
+    ('PC-MB-AM5-B650', 'Bo mạch chủ AM5 B650 mATX', 'Linh kiện máy tính', 'cái'),
+    ('PC-RAM-DDR5-16', 'RAM DDR5 16GB', 'Linh kiện máy tính', 'thanh'),
+    ('PC-SSD-NVME-1T', 'SSD NVMe 1TB', 'Linh kiện máy tính', 'cái'),
+    ('PC-GPU-RTX4060', 'Card đồ họa RTX 4060 8GB', 'Linh kiện máy tính', 'cái'),
+    ('PC-PSU-650-BR', 'Nguồn máy tính 650W 80+ Bronze', 'Linh kiện máy tính', 'cái'),
+    ('PC-CASE-MATX', 'Vỏ máy tính mATX Airflow', 'Linh kiện máy tính', 'cái'),
+    ('PC-COOL-TOWER120', 'Tản nhiệt khí CPU Tower 120mm', 'Linh kiện máy tính', 'cái'),
     ('VS-KHG-001', 'Khăn giấy hộp',            'Vệ sinh',       'hộp')
   ) AS v(sku, name, cat, unit)
   JOIN categories c ON c.category_name = v.cat;
@@ -45,7 +54,10 @@ INSERT INTO suppliers (supplier_name, contact_person, phone, email, address) VAL
 -- minimum stock levels (allowed directly: only quantity is posting-protected)
 UPDATE stock_balances sb SET minimum_stock = v.min_qty
   FROM (VALUES ('VPP-A4-001', 50), ('VPP-BUT-002', 20), ('VPP-KEP-003', 10),
-               ('IT-MOU-001', 10), ('IT-KEY-002', 10), ('IT-HDMI-003', 15), ('VS-KHG-001', 30)) v(sku, min_qty)
+               ('IT-MOU-001', 10), ('IT-KEY-002', 10), ('IT-HDMI-003', 15),
+               ('PC-CPU-AM5-R5', 2), ('PC-MB-AM5-B650', 2), ('PC-RAM-DDR5-16', 4),
+               ('PC-SSD-NVME-1T', 3), ('PC-GPU-RTX4060', 1), ('PC-PSU-650-BR', 2),
+               ('PC-CASE-MATX', 2), ('PC-COOL-TOWER120', 2), ('VS-KHG-001', 30)) v(sku, min_qty)
   JOIN products p ON p.sku = v.sku
  WHERE sb.product_id = p.product_id;
 
@@ -57,7 +69,10 @@ VALUES ('OPENING', (SELECT user_id FROM users WHERE username = 'warehouse01'), '
 INSERT INTO stock_adjustment_items (stock_adjustment_id, product_id, counted_quantity)
 SELECT (SELECT max(stock_adjustment_id) FROM stock_adjustments), p.product_id, v.qty
   FROM (VALUES ('VPP-A4-001', 120), ('VPP-BUT-002', 15), ('VPP-KEP-003', 40),
-               ('IT-MOU-001', 25), ('IT-KEY-002', 8), ('IT-HDMI-003', 30), ('VS-KHG-001', 60)) v(sku, qty)
+               ('IT-MOU-001', 25), ('IT-KEY-002', 8), ('IT-HDMI-003', 30),
+               ('PC-CPU-AM5-R5', 5), ('PC-MB-AM5-B650', 4), ('PC-RAM-DDR5-16', 12),
+               ('PC-SSD-NVME-1T', 8), ('PC-GPU-RTX4060', 3), ('PC-PSU-650-BR', 5),
+               ('PC-CASE-MATX', 4), ('PC-COOL-TOWER120', 6), ('VS-KHG-001', 60)) v(sku, qty)
   JOIN products p ON p.sku = v.sku;
 
 SELECT set_config('app.current_user_id', (SELECT user_id::text FROM users WHERE username = 'manager01'), true);

@@ -19,7 +19,7 @@ public class OpenApiConfig {
 
     @Bean
     public OpenAPI p03OpenApi() {
-        return new OpenAPI()
+        OpenAPI openApi = new OpenAPI()
                 .info(new Info()
                         .title("P03 Inventory & Purchase Request API")
                         .version("v1")
@@ -29,5 +29,9 @@ public class OpenApiConfig {
                         .scheme("bearer")
                         .bearerFormat("JWT")))
                 .addSecurityItem(new SecurityRequirement().addList(BEARER));
+        openApi.getInfo().setDescription("Base path /api. Đăng nhập qua POST /api/auth/login để lấy accessToken, "
+                + "sau đó bấm Authorize trong Swagger UI và dán accessToken để gọi API bảo vệ. "
+                + "Endpoint login không yêu cầu bearer token.");
+        return openApi;
     }
 }

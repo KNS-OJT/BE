@@ -24,6 +24,19 @@ POST /api/auth/login   {"username":"manager01","password":"Demo@12345"}
 GET  /api/products?q=a4        (Authorization: Bearer <accessToken>)
 ```
 
+Trong Swagger UI, gọi `POST /api/auth/login`, sao chép `accessToken`, bấm **Authorize** và nhập token (không cần tự thêm tiền tố `Bearer`). Sau đó gọi các API có khóa bảo mật.
+
+## Luồng nghiệp vụ chính
+
+| Luồng | Endpoint | Vai trò |
+|---|---|---|
+| Purchase Request | `/api/pr` (tạo, sửa, gửi, duyệt, từ chối, hủy) | Requester tạo; Manager duyệt/từ chối |
+| Purchase Order | `/api/po` (tạo, sửa, phát hành, hủy) | Purchasing; chỉ từ PR đã duyệt |
+| Goods Receipt | `/api/goods-receipts` (tạo, sửa, xác nhận, hủy) | Warehouse |
+| Stock Issue | `/api/stock-issues` (tạo, sửa, xác nhận, từ chối, hủy) | Người dùng tạo/hủy yêu cầu của mình; Warehouse xác nhận/từ chối |
+| Stock Adjustment | `/api/stock-adjustments` (tạo, sửa, duyệt, hủy) | Warehouse lập; Manager khác người lập duyệt |
+| Supplier | `/api/suppliers` (quản lý, kích hoạt lại) | Purchasing quản lý; Manager kích hoạt lại |
+
 ## Lệnh
 
 | Việc | Lệnh |
@@ -44,6 +57,6 @@ GET  /api/products?q=a4        (Authorization: Bearer <accessToken>)
 | POST/PUT | `/api/categories[/{id}]` | Warehouse, Manager |
 | GET | `/api/products?q=&categoryId=&activeOnly=&page=&size=`, `/api/products/{id}` | Đã đăng nhập |
 | POST/PUT | `/api/products[/{id}]` | Warehouse, Manager |
-| PUT | `/api/products/{id}/min-stock` | Warehouse, Manager |
+| PUT | `/api/products/{id}/min-stock` | Manager |
 
 Lỗi luôn có dạng `{ "status": 409, "code": "INVALID_STATE", "message": "…", "requestId": "…" }`.

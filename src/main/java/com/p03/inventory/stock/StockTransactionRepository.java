@@ -16,7 +16,7 @@ public interface StockTransactionRepository
         FROM StockTransaction st
         JOIN st.product p
         WHERE (:productId IS NULL OR st.productId = :productId)
-          AND (:type IS NULL OR st.transactionType = :type)
+          AND st.transactionType = coalesce(:type, st.transactionType)
           AND (
               :pattern IS NULL
               OR lower(p.sku) LIKE :pattern ESCAPE '\\'

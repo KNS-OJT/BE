@@ -253,6 +253,18 @@ class PoServiceTest {
         assertCode(() -> service.order(50L), ErrorCode.VALIDATION_ERROR);
     }
 
+    @Test
+    void cancel_orderedPoStoresReasonAndChangesStatus() {
+        PurchaseOrder po = po(50L, PoStatus.ORDERED, activeSupplier);
+        when(orders.findByIdForUpdate(50L)).thenReturn(Optional.of(po));
+
+        service.cancel(50L, new com.p03.inventory.po.dto.PoCancelRequest("  Supplier canceled  "));
+
+        assertThat(po.getStatus()).isEqualTo(PoStatus.CANCELED);
+        assertThat(po.getCancelReason()).isEqualTo("Supplier canceled");
+        verify(orders).saveAndFlush(po);
+    }
+
     // ---- Phạm vi xem ----------------------------------------------------------------------
 
     @Test

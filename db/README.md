@@ -10,6 +10,7 @@ Covers SRS BR-01..BR-24 and SecRS IA-IN01..IA-IN08.
 | `01_schema.sql` | Tables, constraints, workflow triggers, stock posting, audit log, hash chains, views |
 | `02_roles.sql` | Least-privilege accounts: `p03_app`, `p03_readonly`, `p03_backup` (change passwords) |
 | `03_seed.sql` | Demo data (fictional). Password for all demo users: `Demo@12345` |
+| `migrations/V20261114_01__computer_components_catalog.sql` | Idempotent data migration adding PC components and minimum-stock levels |
 | `04_security_tests.sql` | 65 DB-level tests (SEC-TC-301/302, BR-01..22, tamper detection) |
 | `05_concurrency_test.sh` | SEC-TC-303: two concurrent stock issues |
 | `06_backup_restore.sh` | IA-IN08: encrypted backup (age) + checksum, restore + integrity verification |
@@ -29,6 +30,8 @@ psql -h localhost -U p03_app -d p03 -f 07_app_role_tests.sql   # expect: ALL PAS
 ./05_concurrency_test.sh                        # expect: SEC-TC-303: PASS
 ```
 With Docker Compose, mount the `.sql` files into `/docker-entrypoint-initdb.d/` (they run in name order).
+
+For an existing database, apply each unapplied script in `migrations/` once, in filename order, using the intended database connection. The component-catalog migration is idempotent, archives the fictional starter products without deleting their document/ledger history, and creates zero-stock balances through the existing product trigger. Its `NOT VALID` receipt constraint enforces the document reference on new/updated receipts while preserving the existing legacy receipt that is missing a reference; validate that constraint after the source document is reconciled.
 
 ## Rules for the backend (important)
 

@@ -30,4 +30,5 @@ public final class Authz {
     public static final String WAREHOUSE_OR_MANAGER = "hasAnyRole('WAREHOUSE_STAFF','MANAGER')";
     public static final String PURCHASING_OR_MANAGER = "hasAnyRole('PURCHASING_STAFF','MANAGER')";
     public static final String WAREHOUSE_PURCHASING_MANAGER = "hasAnyRole('WAREHOUSE_STAFF','PURCHASING_STAFF','MANAGER')";
+    public static final String STOCK_READER = "hasAnyRole('WAREHOUSE_STAFF','MANAGER')";
 }

@@ -17,18 +17,23 @@ public class StockIssueService {
                              ProductRepository products) {
         this.issues=issues; this.lines=lines; this.products=products;
     }
-    // Conservative initial visibility: all roles see only their OWN issues.
-    // Warehouse review queue belongs to the separately agreed submit workflow.
     @Transactional(readOnly=true)
-    public PageResponse<StockIssueResponse> list(Pageable pageable) {
+    public PageResponse<StockIssueResponse> list(StockIssueStatus status, Pageable pageable) {
         requireRole();
-        return PageResponse.of(issues.findByRequestedBy(CurrentUser.id(), pageable), this::response);
+        if (CurrentUser.is(Role.REQUESTER) || CurrentUser.is(Role.PURCHASING_STAFF)) {
+            var result = status == null
+                    ? issues.findByRequestedBy(CurrentUser.id(), pageable)
+                    : issues.findByRequestedByAndStatus(CurrentUser.id(), status, pageable);
+            return PageResponse.of(result, this::response);
+        }
+        var result = status == null ? issues.findAll(pageable) : issues.findByStatus(status, pageable);
+        return PageResponse.of(result, this::response);
     }
     @Transactional(readOnly=true)
     public StockIssueResponse get(Long id) {
         requireRole();
         StockIssue issue=issues.findById(id).orElseThrow(ApiException::notFound);
-        requireOwner(issue);
+        if (CurrentUser.is(Role.REQUESTER) || CurrentUser.is(Role.PURCHASING_STAFF)) requireOwner(issue);
         return response(issue);
     }
     @Transactional
@@ -58,6 +63,49 @@ public class StockIssueService {
         insertLines(id, request.items());
         return response(issue);
     }
+
+    @Transactional
+    public StockIssueResponse confirm(Long id) {
+        requireWarehouse();
+        StockIssue issue = issues.lockById(id).orElseThrow(ApiException::notFound);
+        if (CurrentUser.id().equals(issue.getRequestedBy())) {
+            throw ApiException.sodViolation("SI", id);
+        }
+        if (issue.getStatus() != StockIssueStatus.DRAFT) {
+            throw ApiException.invalidStateAudited("Chỉ phiếu DRAFT mới được xác nhận", "SI", id);
+        }
+        issue.setConfirmedBy(CurrentUser.id());
+        issue.setStatus(StockIssueStatus.CONFIRMED);
+        return response(issues.saveAndFlush(issue));
+    }
+
+    @Transactional
+    public StockIssueResponse reject(Long id, StockIssueDecisionRequest request) {
+        requireWarehouse();
+        StockIssue issue = issues.lockById(id).orElseThrow(ApiException::notFound);
+        if (CurrentUser.id().equals(issue.getRequestedBy())) {
+            throw ApiException.sodViolation("SI", id);
+        }
+        if (issue.getStatus() != StockIssueStatus.DRAFT) {
+            throw ApiException.invalidStateAudited("Chỉ phiếu DRAFT mới được từ chối", "SI", id);
+        }
+        issue.setCancelReason(request.reason().trim());
+        issue.setStatus(StockIssueStatus.CANCELED);
+        return response(issues.saveAndFlush(issue));
+    }
+
+    @Transactional
+    public StockIssueResponse cancel(Long id, StockIssueDecisionRequest request) {
+        requireRole();
+        StockIssue issue = issues.lockById(id).orElseThrow(ApiException::notFound);
+        requireOwner(issue);
+        if (issue.getStatus() != StockIssueStatus.DRAFT) {
+            throw ApiException.invalidStateAudited("Chỉ yêu cầu xuất DRAFT mới được hủy", "SI", id);
+        }
+        issue.setCancelReason(request.reason().trim());
+        issue.setStatus(StockIssueStatus.CANCELED);
+        return response(issues.saveAndFlush(issue));
+    }
     private void validateLines(List<StockIssueLineRequest> items) {
         Set<Long> seen=new HashSet<>();
         for(var item:items) {
@@ -86,7 +134,12 @@ public class StockIssueService {
         if(!CurrentUser.id().equals(issue.getRequestedBy())) throw ApiException.notOwner("SI",issue.getId());
     }
     private static void requireRole() {
-        if(!CurrentUser.is(Role.REQUESTER) && !CurrentUser.is(Role.WAREHOUSE_STAFF) && !CurrentUser.is(Role.MANAGER))
-            throw ApiException.forbiddenRole("SI",null);
+        if (!CurrentUser.is(Role.REQUESTER) && !CurrentUser.is(Role.WAREHOUSE_STAFF)
+                && !CurrentUser.is(Role.PURCHASING_STAFF) && !CurrentUser.is(Role.MANAGER)) {
+            throw ApiException.forbiddenRole("SI", null);
+        }
+    }
+    private static void requireWarehouse() {
+        if (!CurrentUser.is(Role.WAREHOUSE_STAFF)) throw ApiException.forbiddenRole("SI", null);
     }
 }
