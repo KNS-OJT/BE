@@ -1,4 +1,4 @@
-package com.p03.inventory.common.audit;
+ package com.p03.inventory.common.audit;
 
 import com.p03.inventory.common.error.ApiException;
 import com.p03.inventory.common.security.CurrentUser;

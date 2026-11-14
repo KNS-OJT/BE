@@ -71,9 +71,11 @@ public class StockTransaction {
     @Column(name = "note")
     private String note;
 
+    @JdbcTypeCode(SqlTypes.CHAR)
     @Column(name = "prev_hash", nullable = false, length = 64, insertable = false, updatable = false)
     private String prevHash;
 
+    @JdbcTypeCode(SqlTypes.CHAR)
     @Column(name = "row_hash", nullable = false, unique = true, length = 64, insertable = false, updatable = false)
     private String rowHash;
 }
