@@ -1,0 +1,13 @@
+{
+  "info": {
+    "name": "P03 MODULE TEMPLATE - duplicate for each owner",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Rename MODULE, add only verified endpoints. Copy Error/pagination conventions from docs/api/MODULE_TEMPLATE.md. Empty folder intentionally contains no placeholder requests that can run accidentally."
+  },
+  "item": [
+    {
+      "name": "MODULE - owner fills contract and requests",
+      "item": []
+    }
+  ]
+}
