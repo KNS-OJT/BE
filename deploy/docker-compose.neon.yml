@@ -1,0 +1,54 @@
+name: p03-prod
+
+services:
+  backend:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 128
+    mem_limit: 768m
+    ports:
+      - "127.0.0.1:${BACKEND_PORT:-8080}:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_CONFIG_IMPORT: configtree:/run/secrets/
+      SPRING_DATASOURCE_URL: "jdbc:postgresql://${DB_HOST:?Set direct Neon DB_HOST}/${DB_NAME:?Set Neon DB_NAME}?sslmode=verify-full&channelBinding=require&sslrootcert=/run/secrets/neon-root.crt"
+      SPRING_DATASOURCE_USERNAME: p03_app
+      DB_POOL_SIZE: ${DB_POOL_SIZE:-10}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:?Set the exact frontend origin(s)}
+      SERVER_FORWARD_HEADERS_STRATEGY: native
+    secrets:
+      - source: db_password
+        target: spring.datasource.password
+      - source: jwt_secret
+        target: app.jwt.secret
+      - source: neon_root_cert
+        target: neon-root.crt
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/actuator/health/readiness"]
+      interval: 15s
+      timeout: 3s
+      start_period: 40s
+      retries: 5
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+secrets:
+  db_password:
+    file: ${DB_PASSWORD_FILE:?Set DB_PASSWORD_FILE to the p03_app secret file}
+  jwt_secret:
+    file: ${JWT_SECRET_FILE:?Set JWT_SECRET_FILE to the production JWT secret file}
+  neon_root_cert:
+    file: ${NEON_ROOT_CERT_FILE:?Set NEON_ROOT_CERT_FILE to the Neon TLS root CA PEM}

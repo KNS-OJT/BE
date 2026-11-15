@@ -44,9 +44,19 @@ SELECT 'products' AS tbl, count(*) FROM products
 UNION ALL SELECT 'purchase_requests', count(*) FROM purchase_requests
 UNION ALL SELECT 'stock_transactions', count(*) FROM stock_transactions
 UNION ALL SELECT 'audit_logs', count(*) FROM audit_logs;
-SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM fn_verify_stock_ledger()) THEN 'PASS' ELSE 'FAIL' END AS ledger_chain,
-       CASE WHEN NOT EXISTS (SELECT 1 FROM fn_verify_audit_log())     THEN 'PASS' ELSE 'FAIL' END AS audit_chain,
-       CASE WHEN NOT EXISTS (SELECT 1 FROM v_stock_reconciliation WHERE difference <> 0) THEN 'PASS' ELSE 'FAIL' END AS reconciliation;
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM fn_verify_stock_ledger()) THEN
+    RAISE EXCEPTION 'restore verification failed: stock ledger hash chain is invalid';
+  END IF;
+  IF EXISTS (SELECT 1 FROM fn_verify_audit_log()) THEN
+    RAISE EXCEPTION 'restore verification failed: audit log hash chain is invalid';
+  END IF;
+  IF EXISTS (SELECT 1 FROM v_stock_reconciliation WHERE difference <> 0) THEN
+    RAISE EXCEPTION 'restore verification failed: stock balance does not reconcile with ledger';
+  END IF;
+END $$;
+SELECT 'PASS' AS ledger_chain, 'PASS' AS audit_chain, 'PASS' AS reconciliation;
 SQL
     ;;
   *)
