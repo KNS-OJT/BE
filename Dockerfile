@@ -10,7 +10,7 @@ COPY src ./src
 RUN ./mvnw -B -q -DskipTests package && cp target/*.jar /src/app.jar
 
 FROM eclipse-temurin:21-jre-alpine
-RUN addgroup -S app && adduser -S -G app -H -s /sbin/nologin app
+RUN addgroup -S -g 10001 app && adduser -S -u 10001 -G app -H -s /sbin/nologin app
 WORKDIR /app
 COPY --from=build --chown=app:app /src/app.jar app.jar
 USER app
