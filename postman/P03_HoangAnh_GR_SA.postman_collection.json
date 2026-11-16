@@ -1,0 +1,475 @@
+{
+  "info": {
+    "name": "P03 - Hoàng Anh - Goods Receipt & Stock Adjustment",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Ví dụ riêng GR/SA của Nguyễn Đức Hoàng Anh. Chưa chạy runtime. Điền baseUrl, JWT theo role và các ID thật trước khi gửi. Sau create, sao chép response.id vào grId/saId. cancelGrId/cancelSaId là các DRAFT riêng; không dùng phiếu đã confirm. Collection không chứa kiểm thử, tự đăng nhập hoặc gọi module khác. Contract: docs/api/HOANG_ANH_GR_SA.md."
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "warehouseToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "managerToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "purchaseOrderId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "purchaseOrderItemId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "productId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "grId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "saId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "cancelGrId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "cancelSaId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Goods Receipt - WAREHOUSE_STAFF",
+      "item": [
+        {
+          "name": "GR - List DRAFT",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{warehouseToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/goods-receipts?status=DRAFT&page=0&size=20",
+            "description": "200, trang GR; status là tùy chọn."
+          },
+          "response": []
+        },
+        {
+          "name": "GR - Detail",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{warehouseToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/goods-receipts/{{grId}}",
+            "description": "200, chi tiết GR."
+          },
+          "response": []
+        },
+        {
+          "name": "GR - Create DRAFT",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{warehouseToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/goods-receipts",
+            "description": "201, GR mới. PO phải ORDERED/PARTIALLY_RECEIVED; thay số lượng để phù hợp phần còn lại. Sao chép id trả về vào grId.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"purchaseOrderId\": {{purchaseOrderId}},\n  \"documentReference\": \"DELIVERY-2026-001\",\n  \"note\": \"Nhận đợt 1\",\n  \"items\": [{ \"purchaseOrderItemId\": {{purchaseOrderItemId}}, \"receivedQuantity\": 1.000 }]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GR - Replace DRAFT content",
+          "request": {
+            "method": "PUT",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{warehouseToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/goods-receipts/{{grId}}",
+            "description": "200; thay toàn bộ dòng hàng; chỉ DRAFT.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"documentReference\": \"DELIVERY-2026-001\",\n  \"note\": \"Đã đối chiếu chứng từ\",\n  \"items\": [{ \"purchaseOrderItemId\": {{purchaseOrderItemId}}, \"receivedQuantity\": 1.000 }]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GR - Confirm",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{warehouseToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/goods-receipts/{{grId}}/confirm",
+            "description": "200; trigger tăng tồn và ghi ledger. Confirm lặp trả 409.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"documentReference\": \"DELIVERY-2026-001\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GR - Cancel separate DRAFT",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{warehouseToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/goods-receipts/{{cancelGrId}}/cancel",
+            "description": "200; dùng DRAFT riêng, không dùng grId đã CONFIRMED.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Lập nhầm phiếu nhận\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Stock Adjustment - Warehouse creates / Manager confirms",
+      "item": [
+        {
+          "name": "SA - List DRAFT for Manager",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{managerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/stock-adjustments?status=DRAFT&page=0&size=20",
+            "description": "200; Manager xem phiếu trước khi xác nhận."
+          },
+          "response": []
+        },
+        {
+          "name": "SA - Detail",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{warehouseToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/stock-adjustments/{{saId}}",
+            "description": "200; Warehouse và Manager được xem."
+          },
+          "response": []
+        },
+        {
+          "name": "SA - Create STOCKTAKE DRAFT",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{warehouseToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/stock-adjustments",
+            "description": "201; countedQuantity là tồn cuối cùng, không phải delta. Sao chép id vào saId.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"adjustmentType\": \"STOCKTAKE\",\n  \"reason\": \"Đối chiếu kiểm kê thực tế\",\n  \"items\": [{ \"productId\": {{productId}}, \"countedQuantity\": 8.000, \"note\": \"Kiểm đếm tại kệ A\" }]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "SA - Replace DRAFT content",
+          "request": {
+            "method": "PUT",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{warehouseToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/stock-adjustments/{{saId}}",
+            "description": "200; chỉ Warehouse; thay toàn bộ nội dung DRAFT.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"adjustmentType\": \"STOCKTAKE\",\n  \"reason\": \"Cập nhật kết quả kiểm kê\",\n  \"items\": [{ \"productId\": {{productId}}, \"countedQuantity\": 9.000, \"note\": \"Đã kiểm đếm lại\" }]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "SA - Manager confirms",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{managerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/stock-adjustments/{{saId}}/confirm",
+            "description": "200; Manager phải khác người lập. Snapshot systemQuantity và difference do server trả. Confirm lặp trả 409.",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "SA - Cancel separate DRAFT",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{warehouseToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/stock-adjustments/{{cancelSaId}}/cancel",
+            "description": "200; chỉ Warehouse; dùng DRAFT riêng.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Lập nhầm phiếu kiểm kê\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
