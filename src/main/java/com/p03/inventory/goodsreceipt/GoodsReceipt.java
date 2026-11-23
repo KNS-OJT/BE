@@ -12,6 +12,7 @@ import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.Generated;
 import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.generator.EventType;
 import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
@@ -36,14 +37,14 @@ public class GoodsReceipt {
     @Column(name = "received_by", nullable = false, updatable = false)
     private Long receivedBy;
 
-    @Generated
+    @Generated(event = {EventType.INSERT, EventType.UPDATE})
     @Column(name = "received_at", insertable = false, updatable = false)
     private Instant receivedAt;
 
     @Column(name = "confirmed_by")
     private Long confirmedBy;
 
-    @Generated
+    @Generated(event = {EventType.INSERT, EventType.UPDATE})
     @Column(name = "confirmed_at", insertable = false, updatable = false)
     private Instant confirmedAt;
 
