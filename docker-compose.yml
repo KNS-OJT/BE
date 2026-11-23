@@ -40,6 +40,7 @@ services:
       DB_USER: p03_app
       DB_PASSWORD: ${DB_APP_PASSWORD:?}
       DB_SSLMODE: disable
+      DB_CHANNEL_BINDING: disable
       JWT_SECRET: ${JWT_SECRET:?}
     networks: [app_net, db_net]
     # Không publish cổng: Nginx (app_net) gọi backend:8080 nội bộ

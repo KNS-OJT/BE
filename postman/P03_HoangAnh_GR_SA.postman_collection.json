@@ -417,7 +417,7 @@
                 "value": "application/json"
               }
             ],
-            "url": "{{baseUrl}}/api/stock-adjustments/{{saId}}/confirm",
+            "url": "{{baseUrl}}/api/stock-adjustments/{{saId}}/approve",
             "description": "200; Manager phải khác người lập. Snapshot systemQuantity và difference do server trả. Confirm lặp trả 409.",
             "body": {
               "mode": "raw",

@@ -65,7 +65,7 @@ Luồng hiện có trong DB là `DRAFT → CONFIRMED | CANCELED`. Không có tr�
 | GET | `/stock-adjustments/{id}` | saGet | Warehouse hoặc Manager | 200, SA |
 | POST | `/stock-adjustments` | saCreate | Warehouse | 201, SA DRAFT |
 | PUT | `/stock-adjustments/{id}` | saUpdate | Warehouse | 200, SA DRAFT |
-| POST | `/stock-adjustments/{id}/confirm` | saConfirm | Manager, khác người lập | 200, SA CONFIRMED |
+| POST | `/stock-adjustments/{id}/approve` | saApprove | Manager, khác người lập | 200, SA CONFIRMED |
 | POST | `/stock-adjustments/{id}/cancel` | saCancel | Warehouse | 200, SA CANCELED |
 
 Quyền tạo/xác nhận theo trigger và README; quyền xem/sửa/hủy được triển khai cho bộ phận kho, Manager chỉ xem và xác nhận. Không thêm kiểm tra owner như PR/SI. Nhóm cần review các lựa chọn contract này trước phát hành, vì tài liệu phân công ghi nhận đây là các điểm cần chốt và repo không có biên bản xác nhận riêng.

@@ -69,10 +69,10 @@ public class StockAdjustmentController {
     }
 
     @PreAuthorize(Authz.MANAGER)
-    @PostMapping("/{id}/confirm")
-    @Operation(operationId = "saConfirm", summary = "Manager xác nhận DRAFT, không tự xác nhận phiếu đã lập")
-    public StockAdjustmentResponse confirm(@PathVariable @Positive Long id,
-                                           @Valid @RequestBody StockAdjustmentConfirmRequest request) {
+    @PostMapping("/{id}/approve")
+    @Operation(operationId = "saApprove", summary = "Manager duyệt DRAFT → CONFIRMED (không tự duyệt phiếu mình lập, BR-24)")
+    public StockAdjustmentResponse approve(@PathVariable @Positive Long id,
+                                           @Valid @RequestBody(required = false) StockAdjustmentConfirmRequest request) {
         return service.confirm(id);
     }
 
